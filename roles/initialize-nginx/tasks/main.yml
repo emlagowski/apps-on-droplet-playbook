@@ -1,0 +1,14 @@
+- name: Clone repository
+  git:
+    repo: "{{ git_repo_ssh }}"
+    dest: "{{ repo_dest }}"
+    key_file: /root/.ssh/id_ed25519
+    accept_hostkey: yes
+
+- name: Run docker-compose
+  community.docker.docker_compose:
+    project_src: "{{ repo_dest }}"
+  register: output
+
+- ansible.builtin.debug:
+    var: output

@@ -1,0 +1,8 @@
+ssh_key_pub: ~/.ssh/id_rsa.pub
+digitalocean:
+  project: all-in-one
+  droplet: 
+    name: all-in-one
+    size: s-1vcpu-1gb
+    region: fra1
+    image: ubuntu-20-04-x64

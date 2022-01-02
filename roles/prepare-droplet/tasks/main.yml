@@ -1,0 +1,62 @@
+---
+- name: Install aptitude using apt & update cache
+  apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+- name: Install required system packages for Docker
+  apt: name={{ item }} state=latest update_cache=yes
+  loop: [ 
+    'apt-transport-https', 
+    'ca-certificates', 
+    'curl', 
+    'software-properties-common', 
+    'virtualenv', 
+    'python3',
+    'python3-setuptools',
+    'python3-pip',
+    'tree'
+    ]
+
+- name: Add Docker GPG apt Key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker Repository
+  apt_repository:
+    repo: deb https://download.docker.com/linux/ubuntu bionic stable
+    state: present
+
+- name: Update apt and install docker-ce
+  apt: update_cache=yes name=docker-ce state=latest
+
+- name: Update apt and install docker-compose
+  apt: update_cache=yes name=docker-compose state=latest
+
+- name: Install python modules
+  pip:
+    name: "{{ item.name }}"
+  with_items:
+    - name: docker
+    - name: docker-compose
+    - name: PyYAML
+      
+- name: Log into docker registry
+  docker_login:
+    registry_url: "{{ docker_registry }}"
+    username: "{{ docker_login }}"
+    password: "{{ gh_gcr_token_ro }}"
+
+- name: Generate SSH key
+  community.crypto.openssh_keypair:
+    type: ed25519
+    path: ~/.ssh/id_ed25519
+
+- name: Read SSH public key to authorize
+  ansible.builtin.shell: cat ~/.ssh/id_ed25519.pub
+  register: ssh_pub_key
+
+- name: Add generated SSH key to GitHub account
+  github_key:
+    name: "Access Key for DO droplet"
+    token: '{{ gh_api_key }}'
+    pubkey: '{{ ssh_pub_key.stdout }}'

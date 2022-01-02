@@ -1,0 +1,38 @@
+- name: Clone repository
+  git:
+    repo: "{{ git_repo_ssh }}"
+    dest: "{{ repo_dest }}"
+    key_file: /root/.ssh/id_ed25519
+    accept_hostkey: yes
+
+- name: Run docker-compose
+  community.docker.docker_compose:
+    project_src: "{{ repo_dest }}"
+    project_name: "{{ domain }}"
+    remove_orphans: true
+    remove_images: all
+    remove_volumes: true
+  register: output
+
+- name: Create a domain
+  community.digitalocean.digital_ocean_domain:
+    oauth_token: "{{ oauth_token }}"
+    state: present
+    name: "{{ item }}"
+    project_name: "{{ project_name }}"
+    ip: "{{ ansible_ssh_host }}"
+  with_items:
+    - "www.{{ domain }}"
+    - "{{ domain }}"
+
+- name: Create default A record for example.com
+  community.digitalocean.digital_ocean_domain_record:
+    oauth_token: "{{ oauth_token }}"
+    state: present
+    domain: "{{ item }}"
+    type: A
+    name: "@"
+    data: "{{ ansible_ssh_host }}"
+  with_items:
+    - "www.{{ domain }}"
+    - "{{ domain }}"

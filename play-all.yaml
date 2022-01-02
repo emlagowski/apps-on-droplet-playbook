@@ -1,0 +1,58 @@
+---
+- name: Create droplet on Digital Ocean
+  hosts: localhost
+  connection: local
+  vars_files:
+    - secrets.yaml
+  roles:
+  - role: create-droplet
+    digitalocean:
+      project: all-in-one
+      droplet: 
+        name: all-in-one
+    
+- name: Prepare created droplet for running applications
+  hosts: droplet
+  vars_files:
+    - secrets.yaml
+  roles:
+  - role: prepare-droplet
+    docker_login: emlagowski
+
+- name: Run nginx reverse proxy on created droplet
+  hosts: droplet
+  vars_files:
+    - secrets.yaml
+  roles:
+  - role: initialize-nginx
+    git_repo_ssh: git@github.com:emlagowski/nginx-proxy-with-lets-encrypt.git
+    certificate_owner_email: marcinlagowski92@gmail.com
+    repo_dest: repos/nginx
+
+- name: Run example-project with public domain
+  hosts: droplet
+  vars_files:
+    - secrets.yaml
+  roles:
+  - role: run-project
+    git_repo_ssh: git@github.com:emlagowski/droplet-example-project.git
+    repo_dest: repos/droplet-example-project
+    domain: test.letsbesanta.com
+    project_name: all-in-one
+  environment:
+    DOMAINS: test.letsbesanta.com,www.test.letsbesanta.com
+
+- name: Run example-project-2 with public domain
+  hosts: droplet
+  vars_files:
+    - secrets.yaml
+  roles:
+  - role: run-project
+    git_repo_ssh: git@github.com:emlagowski/droplet-example-project.git
+    repo_dest: repos/droplet-example-project-2
+    domain: test2.letsbesanta.com
+    project_name: all-in-one
+  environment:
+    DOMAINS: test2.letsbesanta.com,www.test2.letsbesanta.com
+
+    

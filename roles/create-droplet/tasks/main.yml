@@ -1,0 +1,73 @@
+---
+- name: Add your local SSH public key to Digital Ocean
+  community.digitalocean.digital_ocean_sshkey:
+    oauth_token: "{{ oauth_token }}"
+    name: ssh_key
+    ssh_pub_key: "{{lookup('file', '{{ ssh_key_pub }}') }}"
+    state: present
+  register: my_ssh_key
+
+- name: Create a new Droplet and assign it into existing project
+  community.digitalocean.digital_ocean_droplet:
+    oauth_token: "{{ oauth_token }}"
+    state: present
+    name: "{{ digitalocean.droplet.name }}"
+    unique_name: true
+    size: "{{ digitalocean.droplet.size }}"
+    region: "{{ digitalocean.droplet.region }}"
+    image: "{{ digitalocean.droplet.image }}"
+    project: "{{ digitalocean.project }}"
+    wait_timeout: 500
+    ssh_keys:
+      - "{{ my_ssh_key.data.ssh_key.id }}"
+
+- name: Get information about droplet
+  community.digitalocean.digital_ocean_droplet_info:
+    oauth_token: "{{ oauth_token }}"
+    name: "{{ digitalocean.droplet.name }}"
+  register: my_droplet
+
+- name: Show Droplet info
+  ansible.builtin.debug:
+    msg: |
+      Droplet ID is {{ my_droplet.data[0].id }}
+      First Public IPv4 is {{ (my_droplet.data[0].networks.v4 | selectattr('type', 'equalto', 'public')).0.ip_address | default('<none>', true) }}
+      First Private IPv4 is {{ (my_droplet.data[0].networks.v4 | selectattr('type', 'equalto', 'private')).0.ip_address | default('<none>', true) }}
+
+- name: Create a Firewall for created droplet (inbound & outband rules)
+  community.digitalocean.digital_ocean_firewall:
+    oauth_token: "{{ oauth_token }}"
+    name: "{{ digitalocean.droplet.name }}-firewall"
+    state: present
+    inbound_rules:
+      - protocol: "tcp"
+        ports: "22"
+        sources:
+          addresses: ["0.0.0.0/0", "::/0"]
+      - protocol: "tcp"
+        ports: "80"
+        sources:
+          addresses: ["0.0.0.0/0", "::/0"]
+      - protocol: "tcp"
+        ports: "443"
+        sources:
+          addresses: ["0.0.0.0/0", "::/0"]
+    outbound_rules:
+      - protocol: "tcp"
+        ports: "1-65535"
+        destinations:
+          addresses: ["0.0.0.0/0", "::/0"]
+      - protocol: "udp"
+        ports: "1-65535"
+        destinations:
+          addresses: ["0.0.0.0/0", "::/0"]
+      - protocol: "icmp"
+        ports: "1-65535"
+        destinations:
+          addresses: ["0.0.0.0/0", "::/0"]
+    droplet_ids: [ "{{ my_droplet.data[0].id }}" ]
+
+- name: Add droplet to hosts
+  add_host:
+    hostname: "{{ (my_droplet.data[0].networks.v4 | selectattr('type', 'equalto', 'public')).0.ip_address | default('<none>', true) }}"
+    groupname: droplet
