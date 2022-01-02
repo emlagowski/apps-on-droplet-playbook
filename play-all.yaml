@@ -6,6 +6,9 @@
     - secrets.yaml
   roles:
   - role: create-droplet
+  tags:
+    - create-droplet
+    - droplet
     
 - name: Prepare created droplet for running applications
   hosts: droplet
@@ -14,6 +17,9 @@
   roles:
   - role: prepare-droplet
     docker_login: emlagowski
+  tags:
+    - init-droplet
+    - droplet
 
 - name: Run nginx reverse proxy on created droplet
   hosts: droplet
@@ -23,6 +29,9 @@
   - role: initialize-nginx
     git_repo_ssh: git@github.com:emlagowski/nginx-proxy-with-lets-encrypt.git
     certificate_owner_email: marcinlagowski92@gmail.com
+  tags:
+    - init-droplet
+    - droplet
 
 - name: Run example-project with public domain
   hosts: droplet
@@ -31,19 +40,56 @@
   roles:
   - role: run-project
     git_repo_ssh: git@github.com:emlagowski/droplet-example-project.git
-    domain: "abc.letsbesanta.com"
+    domain: "test.letsbesanta.com"
   environment:
-    DOMAINS: "abc.letsbesanta.com,www.abc.letsbesanta.com"
+    DOMAINS: "test.letsbesanta.com,www.test.letsbesanta.com"
+  tags:
+    - apps
+    - example-app
 
-- name: Run example-project-2 with public domain
+- name: Run newoncequiz app
   hosts: droplet
   vars_files:
     - secrets.yaml
   roles:
   - role: run-project
-    git_repo_ssh: git@github.com:emlagowski/droplet-example-project.git
-    domain: "xyz.letsbesanta.com"
+    git_repo_ssh: git@github.com:emlagowski/newoncequiz-server.git
+    domain: "newoncequiz.pl"
+    docker_compose_filename: docker-compose/docker-compose.prod.yaml
   environment:
-    DOMAINS: "xyz.letsbesanta.com,www.xyz.letsbesanta.com"
+    API_DOMAINS: "api.newoncequiz.pl"
+    WEB_DOMAINS: "newoncequiz.pl"
+  tags:
+    - apps
+    - newonce
+
+- name: Run letsbesanta app
+  hosts: droplet
+  vars_files:
+    - secrets.yaml
+  roles:
+  - role: run-project
+    git_repo_ssh: git@github.com:emlagowski/secret-santa.git
+    domain: "letsbesanta.com"
+    docker_compose_filename: docker-compose/docker-compose.prod.yaml
+  environment:
+    API_DOMAINS: "api.letsbesanta.com"
+    WEB_DOMAINS: "letsbesanta.com"
+  tags:
+    - apps
+    - secret-santa
+
+- name: restart nginx
+  hosts: droplet
+  vars:
+    ansible_user: root
+    ansible_ssh_private_key_file: ~/.ssh/id_rsa
+  tasks:
+    - name: restart
+      community.docker.docker_compose:
+        project_src: "repos/nginx"
+        restarted: yes
+        services: nginx-proxy-acme
+      register: output
 
     

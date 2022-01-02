@@ -8,6 +8,7 @@
 - name: Run docker-compose
   community.docker.docker_compose:
     project_src: "repos/{{ domain }}"
+    files: "{{ docker_compose_filename }}"
     project_name: "{{ domain }}"
     remove_orphans: true
     remove_images: all
@@ -22,10 +23,10 @@
     project_name: "{{ project_name }}"
     ip: "{{ ansible_ssh_host }}"
   with_items:
-    - "www.{{ domain }}"
+    # - "www.{{ domain }}"
     - "{{ domain }}"
 
-- name: Create default A record for example.com
+- name: Create default A record
   community.digitalocean.digital_ocean_domain_record:
     oauth_token: "{{ oauth_token }}"
     state: present
@@ -34,5 +35,14 @@
     name: "@"
     data: "{{ ansible_ssh_host }}"
   with_items:
-    - "www.{{ domain }}"
+    # - "www.{{ domain }}"
     - "{{ domain }}"
+
+- name: Create default A record for API
+  community.digitalocean.digital_ocean_domain_record:
+    oauth_token: "{{ oauth_token }}"
+    state: present
+    domain: "{{ domain }}"
+    type: A
+    name: "api"
+    data: "{{ ansible_ssh_host }}"
