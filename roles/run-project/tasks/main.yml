@@ -1,13 +1,13 @@
 - name: Clone repository
   git:
     repo: "{{ git_repo_ssh }}"
-    dest: "{{ repo_dest }}"
+    dest: "repos/{{ domain }}"
     key_file: /root/.ssh/id_ed25519
     accept_hostkey: yes
 
 - name: Run docker-compose
   community.docker.docker_compose:
-    project_src: "{{ repo_dest }}"
+    project_src: "repos/{{ domain }}"
     project_name: "{{ domain }}"
     remove_orphans: true
     remove_images: all
